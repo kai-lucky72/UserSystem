@@ -18,6 +18,10 @@ import HelpRequests from "@/pages/admin/help-requests";
 
 // Manager and agent pages
 import ManagerDashboard from "@/pages/manager/dashboard";
+import ManagerAgents from "@/pages/manager/agents";
+import ManagerAttendance from "@/pages/manager/attendance";
+import ManagerReports from "@/pages/manager/reports";
+import ManagerLeader from "@/pages/manager/leader";
 import AgentDashboard from "@/pages/agent/dashboard";
 import AgentAttendance from "@/pages/agent/attendance";
 import AgentClients from "@/pages/agent/clients";
@@ -38,6 +42,10 @@ function Router() {
       
       {/* Manager Routes */}
       <ManagerRoute path="/manager/dashboard" component={ManagerDashboard} />
+      <ManagerRoute path="/manager/agents" component={ManagerAgents} />
+      <ManagerRoute path="/manager/attendance" component={ManagerAttendance} />
+      <ManagerRoute path="/manager/reports" component={ManagerReports} />
+      <ManagerRoute path="/manager/leader" component={ManagerLeader} />
       
       {/* Agent Routes */}
       <AgentRoute path="/agent/dashboard" component={AgentDashboard} />
