@@ -79,18 +79,25 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid credentials" });
         }
 
-        // If user has a password set, verify it using scrypt
-        if (user.password) {
-          try {
-            // Compare passwords securely
-            const passwordMatches = await comparePasswords(password, user.password);
-            if (!passwordMatches) {
-              return done(null, false, { message: "Invalid password" });
-            }
-          } catch (error) {
-            console.error("Password comparison error:", error);
-            return done(null, false, { message: "Authentication error" });
+        // If user has no password set, allow login without password
+        if (!user.password) {
+          return done(null, user);
+        }
+        
+        // If user has a password set but none provided
+        if (!password) {
+          return done(null, false, { message: "Password required" });
+        }
+        
+        try {
+          // Compare passwords securely
+          const passwordMatches = await comparePasswords(password, user.password);
+          if (!passwordMatches) {
+            return done(null, false, { message: "Invalid password" });
           }
+        } catch (error) {
+          console.error("Password comparison error:", error);
+          return done(null, false, { message: "Authentication error" });
         }
 
         return done(null, user);
