@@ -15,7 +15,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/managers", async (req, res, next) => {
     try {
       const managers = await storage.getAllManagers();
-      res.json(managers);
+      const defaultUsers = await storage.getDefaultUsers();
+      res.json([...managers, ...defaultUsers]);
     } catch (error) {
       next(error);
     }

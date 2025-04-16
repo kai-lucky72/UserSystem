@@ -81,6 +81,20 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(users.firstName));
   }
 
+  async getDefaultUsers(): Promise<User[]> {
+    return db.select()
+      .from(users)
+      .where(
+        and(
+          eq(users.firstName, "Default"),
+          or(
+            eq(users.role, UserRole.AGENT),
+            eq(users.role, UserRole.MANAGER)
+          )
+        )
+      );
+  }
+
   async getAllAgentsByManagerId(managerId: number): Promise<User[]> {
     return db.select()
       .from(users)

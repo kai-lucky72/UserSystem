@@ -38,6 +38,9 @@ function Router() {
       
       {/* Agent Routes */}
       <AgentRoute path="/agent/dashboard" component={AgentDashboard} />
+      <AgentRoute path="/agent/attendance" component={AgentAttendance} />
+      <AgentRoute path="/agent/clients" component={AgentClients} />
+      <AgentRoute path="/agent/performance" component={AgentPerformance} />
       
       <Route component={NotFound} />
     </Switch>

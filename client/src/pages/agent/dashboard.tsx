@@ -280,7 +280,11 @@ export default function AgentDashboard() {
                     </dl>
                   )}
                   <div className="mt-6 text-right">
-                    <Button variant="link" className="text-primary hover:text-blue-600">
+                    <Button 
+                      variant="link" 
+                      className="text-primary hover:text-blue-600"
+                      onClick={() => window.location.href = '/agent/performance'}
+                    >
                       View detailed reports
                       <ArrowRight className="ml-1 h-4 w-4" />
                     </Button>
