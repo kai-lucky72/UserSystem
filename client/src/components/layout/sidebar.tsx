@@ -8,13 +8,14 @@ import {
   HelpCircle, 
   BarChart3,
   Clock,
-  User,
+  User as UserIcon,
   ChevronRight,
   LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserRole } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface SidebarProps {
   className?: string;
@@ -22,12 +23,25 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const { user, logoutMutation } = useAuth();
-  const [location] = useLocation();
+  const { toast } = useToast();
+  const [location, navigate] = useLocation();
 
   if (!user) return null;
 
   const handleLogout = () => {
-    logoutMutation.mutate();
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        // Force navigation to auth page after logout
+        navigate("/auth");
+      },
+      onError: (error) => {
+        toast({
+          title: "Logout failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   // Determine navigation items based on user role
@@ -53,7 +67,7 @@ export function Sidebar({ className }: SidebarProps) {
         return [
           { href: "/agent/dashboard", label: "Dashboard", icon: <LayoutDashboard className="mr-3 h-5 w-5" /> },
           { href: "/agent/attendance", label: "Attendance", icon: <Clock className="mr-3 h-5 w-5" /> },
-          { href: "/agent/clients", label: "Clients", icon: <User className="mr-3 h-5 w-5" /> },
+          { href: "/agent/clients", label: "Clients", icon: <UserIcon className="mr-3 h-5 w-5" /> },
           { href: "/agent/performance", label: "Performance", icon: <BarChart3 className="mr-3 h-5 w-5" /> },
         ];
       default:
@@ -86,9 +100,9 @@ export function Sidebar({ className }: SidebarProps) {
     <div className={cn("flex flex-col h-full bg-gray-800", className)}>
       <div className="flex items-center h-16 px-4 bg-gray-900">
         <Link href={getDashboardLink()}>
-          <h2 className="text-lg font-bold text-white cursor-pointer">
+          <div className="text-lg font-bold text-white cursor-pointer">
             {user.role.charAt(0).toUpperCase() + user.role.slice(1)} Dashboard
-          </h2>
+          </div>
         </Link>
       </div>
       
@@ -96,9 +110,9 @@ export function Sidebar({ className }: SidebarProps) {
         <nav className="flex-1 px-2 py-4 space-y-1">
           {navItems.map((item, index) => (
             <Link key={index} href={item.href}>
-              <a
+              <div
                 className={cn(
-                  "flex items-center px-2 py-2 text-sm font-medium rounded-md group",
+                  "flex items-center px-2 py-2 text-sm font-medium rounded-md group cursor-pointer",
                   location === item.href
                     ? "text-white bg-gray-900"
                     : "text-gray-300 hover:bg-gray-700 hover:text-white"
@@ -109,7 +123,7 @@ export function Sidebar({ className }: SidebarProps) {
                 {location === item.href && (
                   <ChevronRight className="ml-auto h-4 w-4" />
                 )}
-              </a>
+              </div>
             </Link>
           ))}
         </nav>

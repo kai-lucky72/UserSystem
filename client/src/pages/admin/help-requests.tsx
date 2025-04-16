@@ -146,13 +146,13 @@ export default function HelpRequests() {
                                 <HelpCircle className="h-8 w-8 text-red-500 mt-1" />
                                 <div>
                                   <h3 className="text-lg font-medium">
-                                    {request.title}
+                                    Help Request
                                     <Badge variant="outline" className="ml-2 font-normal">
                                       ID: #{request.id}
                                     </Badge>
                                   </h3>
                                   <p className="mt-1 text-sm text-gray-500">
-                                    From: {request.userName} ({request.userEmail})
+                                    From: {request.name} ({request.email})
                                   </p>
                                   <p className="mt-2 text-sm text-gray-700">{request.message}</p>
                                   <div className="mt-3 flex items-center text-xs text-gray-500">
@@ -202,17 +202,17 @@ export default function HelpRequests() {
                               <CheckCircle className="h-8 w-8 text-green-500 mt-1" />
                               <div className="flex-1">
                                 <h3 className="text-lg font-medium text-gray-700">
-                                  {request.title}
+                                  Help Request
                                   <Badge variant="outline" className="ml-2 font-normal text-gray-600">
                                     ID: #{request.id}
                                   </Badge>
                                 </h3>
                                 <p className="mt-1 text-sm text-gray-500">
-                                  From: {request.userName} ({request.userEmail})
+                                  From: {request.name} ({request.email})
                                 </p>
                                 <p className="mt-2 text-sm text-gray-600">{request.message}</p>
                                 <div className="mt-3 flex items-center text-xs text-gray-500">
-                                  <span>Resolved {timeAgo(new Date(request.resolvedAt || request.createdAt))}</span>
+                                  <span>Resolved {timeAgo(new Date(request.createdAt))}</span>
                                   <span className="mx-1">&bull;</span>
                                   <span>Submitted {formatDate(new Date(request.createdAt))}</span>
                                 </div>
