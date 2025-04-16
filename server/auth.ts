@@ -4,10 +4,17 @@ import { Express } from "express";
 import session from "express-session";
 import { UserRole, User, loginSchema, helpRequestSchema } from "@shared/schema";
 import { storage } from "./storage";
-import { scrypt, timingSafeEqual } from "crypto";
+import { scrypt, timingSafeEqual, randomBytes } from "crypto";
 import { promisify } from "util";
 
 const scryptAsync = promisify(scrypt);
+
+// Hash a password with a random salt
+export async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString("hex");
+  const buf = await scryptAsync(password, salt, 64) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 // Compare the supplied password with the stored hashed password
 async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
