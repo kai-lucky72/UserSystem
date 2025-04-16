@@ -1,0 +1,22 @@
+
+services:
+  - type: web
+    name: agent-management
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+    healthCheckPath: /api/health
+    autoDeploy: true
+    plan: free
+
+databases:
+  - name: agent-management-db
+    plan: free
+    ipAllowList: []
