@@ -142,7 +142,7 @@ export function AssignLeaderModal({ open, onOpenChange }: AssignLeaderModalProps
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => onClose()}
+                  onClick={() => onOpenChange(false)}
                 >
                   Cancel
                 </Button>
