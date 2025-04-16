@@ -230,7 +230,10 @@ export function AddAgentModal({ open, onOpenChange }: AddAgentModalProps) {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => onOpenChange(false)}
+                onClick={() => {
+                  form.reset();
+                  onOpenChange(false);
+                }}
               >
                 Cancel
               </Button>

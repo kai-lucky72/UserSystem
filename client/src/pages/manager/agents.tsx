@@ -101,7 +101,15 @@ export default function ManagerAgents() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                               <div className="flex space-x-2">
-                                <Button variant="ghost" size="sm">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => {
+                                    // Handle view action
+                                    const baseUrl = agent.role === "AGENT" ? "/agent" : "/manager";
+                                    window.location.href = `${baseUrl}/performance?userId=${agent.id}`;
+                                  }}
+                                >
                                   <Eye className="h-4 w-4" />
                                 </Button>
                                 <Button
