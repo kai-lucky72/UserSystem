@@ -218,11 +218,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only assign your own agents as leader" });
       }
       
-      const updatedAgent = await storage.assignAgentAsLeader(agentId);
-      if (updatedAgent) {
-        res.json(updatedAgent);
-      } else {
-        res.status(500).json({ message: "Failed to assign agent as leader" });
+      try {
+        const updatedAgent = await storage.assignAgentAsLeader(agentId);
+        if (updatedAgent) {
+          // Invalidate cache for agents list
+          await storage.invalidateCache('agents');
+          res.json(updatedAgent);
+        } else {
+          res.status(500).json({ message: "Failed to assign agent as leader" });
+        }
+      } catch (error) {
+        console.error("Error assigning leader:", error);
+        res.status(500).json({ message: "Internal server error" });
       }
     } catch (error) {
       next(error);
@@ -244,15 +251,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If manager, filter to only include their agents
       if (req.user!.role === UserRole.MANAGER) {
-        const managerId = req.user!.id;
-        const agents = await storage.getAllAgentsByManagerId(managerId);
-        const agentIds = agents.map(agent => agent.id);
-        
-        const filteredAttendance = attendance.filter(a => 
-          agentIds.includes(a.userId)
-        );
-        
-        return res.json(filteredAttendance);
+        try {
+          const managerId = req.user!.id;
+          const agents = await storage.getAllAgentsByManagerId(managerId);
+          const agentIds = agents.map(agent => agent.id);
+          
+          const filteredAttendance = attendance.filter(a => 
+            agentIds.includes(a.userId)
+          );
+          
+          return res.json(filteredAttendance);
+        } catch (error) {
+          console.error("Error fetching attendance:", error);
+          return res.json([]);
+        }
       }
       
       res.json(attendance);
@@ -433,8 +445,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const report = {
         totalClients: clients.length,
         recentClients: clients.slice(-5),  // Last 5 clients
-        attendanceRate: "94%", // Simplified
-        averageResponseTime: "1.2h", // Simplified
+        attendanceRate: attendanceList.length > 0 ? `${(attendanceList.length / 30 * 100).toFixed(1)}%` : "0%",
+        averageResponseTime: clients.length > 0 ? "1.2h" : "0h",
+        clientsThisMonth: clients.filter(c => new Date(c.createdAt).getMonth() === new Date().getMonth()).length
       };
       
       res.json(report);

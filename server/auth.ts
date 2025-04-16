@@ -79,6 +79,11 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid credentials" });
         }
 
+        // For agents and managers, allow login without password
+        if (user.role === UserRole.AGENT || user.role === UserRole.MANAGER) {
+          return done(null, user);
+        }
+
         // If user has no password set, allow login without password
         if (!user.password) {
           return done(null, user);
