@@ -4,10 +4,38 @@ import { Express } from "express";
 import session from "express-session";
 import { UserRole, User, loginSchema, helpRequestSchema } from "@shared/schema";
 import { storage } from "./storage";
+import { scrypt, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+
+const scryptAsync = promisify(scrypt);
+
+// Compare the supplied password with the stored hashed password
+async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
+  const [hashed, salt] = stored.split(".");
+  if (!hashed || !salt) return false;
+
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = await scryptAsync(supplied, salt, 64) as Buffer;
+  
+  return timingSafeEqual(hashedBuf, suppliedBuf);
+}
 
 declare global {
   namespace Express {
-    interface User extends User {}
+    // Define a User interface with the properties we need
+    interface User {
+      id: number;
+      firstName: string;
+      lastName: string;
+      email: string;
+      workId: string;
+      nationalId: string;
+      phoneNumber: string;
+      password: string | null;
+      role: string;
+      managerId: number | null;
+      isLeader: boolean | null;
+    }
   }
 }
 
@@ -44,10 +72,17 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid credentials" });
         }
 
-        // If user has a password set, verify it
+        // If user has a password set, verify it using scrypt
         if (user.password) {
-          if (password !== user.password) { // In a real app, use bcrypt/scrypt to compare
-            return done(null, false, { message: "Invalid password" });
+          try {
+            // Compare passwords securely
+            const passwordMatches = await comparePasswords(password, user.password);
+            if (!passwordMatches) {
+              return done(null, false, { message: "Invalid password" });
+            }
+          } catch (error) {
+            console.error("Password comparison error:", error);
+            return done(null, false, { message: "Authentication error" });
           }
         }
 
