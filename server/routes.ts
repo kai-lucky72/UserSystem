@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 import { UserRole, insertUserSchema, insertAttendanceSchema, insertClientSchema } from "@shared/schema";
 import { format } from "date-fns";
 
@@ -33,6 +33,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingUser = await storage.getUserByWorkId(managerData.workId);
       if (existingUser) {
         return res.status(400).json({ message: "Work ID already exists" });
+      }
+
+      // Hash the password if provided
+      if (managerData.password) {
+        managerData.password = await hashPassword(managerData.password);
       }
 
       const manager = await storage.createUser(managerData);
@@ -150,6 +155,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingUser = await storage.getUserByWorkId(agentData.workId);
       if (existingUser) {
         return res.status(400).json({ message: "Work ID already exists" });
+      }
+
+      // Hash the password if provided
+      if (agentData.password) {
+        agentData.password = await hashPassword(agentData.password);
       }
 
       const agent = await storage.createUser(agentData);
