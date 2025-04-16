@@ -1,0 +1,362 @@
+1. User Roles & Permissions
+Admin
+
+Capabilities:
+
+o
+Add and remove Managers. Removing a Manager cascades to remove all associated Agents.
+o
+o
+Cannot add or remove Agents directly.
+o
+
+Data Requirements when Adding a Manager:
+
+o
+First Name & Last Name
+o
+o
+Email (for notifications)
+o
+o
+National ID
+o
+o
+Phone Number
+o
+o
+Work ID (used for login)
+o
+Manager
+
+Capabilities:
+
+o
+Add, remove, and manage Agents under them.
+o
+o
+Appoint an Agent Leader.
+o
+o
+Cannot add or remove Admins or other Managers.
+o
+
+Data Requirements when Adding an Agent:
+
+o
+First Name & Last Name
+o
+o
+Email (for notifications and reminders)
+o
+o
+National ID
+o
+o
+Phone Number
+o
+o
+Work ID (used for login)
+o
+Agent
+
+Capabilities:
+
+o
+Cannot sign up themselves; must be added by a Manager.
+o
+o
+Responsibilities:
+o
+
+Mark attendance (within set time limits).
+
+
+Add client details.
+
+
+Generate performance reports.
+
+
+2. Authentication & Login Flow
+Login Process
+
+No Signup Allowed: Users are added manually by Admins (for Managers) and Managers (for Agents).
+
+
+Login Fields:
+
+o
+Work ID (primary identifier)
+o
+o
+Email (secondary identifier)
+o
+
+Password Handling:
+
+o
+The system does not enforce the use of a password unless the user explicitly requests it.
+o
+o
+If no password is set, the user logs in solely with Work ID and email.
+o
+o
+If a password is requested, it is used to secure the account and prevent unauthorized access.
+o
+
+Role-Based Redirection:
+
+o
+After successful login, the system identifies the user’s role (Admin, Manager, or Agent) based on Work ID and email.
+o
+o
+Users are then redirected to the appropriate dashboard.
+o
+
+Unrecognized Users:
+
+o
+If invalid credentials are entered, the system provides a built-in email help form.
+o
+o
+Help requests are sent to the Admin’s email for review and resolution.
+o
+
+3. User Workflows
+Admin Workflow
+1.
+Login:
+2.
+o
+Log in using Work ID and email (and password if set).
+o
+3.
+Manage Managers:
+4.
+o
+Add Managers: Enter required details (personal information and credentials).
+o
+o
+Remove Managers: Removing a Manager automatically removes their Agents.
+o
+5.
+Monitor Users:
+6.
+o
+View all Managers and their associated Agents.
+o
+7.
+Handle Login Issues:
+8.
+o
+Review and respond to help requests from unrecognized users.
+o
+Manager Workflow
+1.
+Login:
+2.
+o
+Log in using Work ID and email (and password if set).
+o
+3.
+Manage Agents:
+4.
+o
+Add Agents: Input required details to add an Agent.
+o
+o
+Remove Agents: Remove agents as needed.
+o
+o
+Assign Agent Leader: Designate an Agent as the team leader.
+o
+5.
+Reports & Notifications:
+6.
+o
+View attendance and performance reports for agents.
+o
+o
+Receive notifications (e.g., alerts for missed attendance).
+o
+Agent Workflow
+1.
+Login:
+2.
+o
+Log in using Work ID and email (and password if set).
+o
+3.
+Mark Attendance:
+4.
+o
+Mark attendance between 6:00 AM and 9:00 AM.
+o
+5.
+Manage Clients:
+6.
+o
+Add client details after marking attendance.
+o
+7.
+Performance Reports:
+8.
+o
+Generate and view performance reports based on attendance and client interactions.
+o
+
+4. System Architecture
+Frontend
+
+Admin & Manager Dashboard:
+
+o
+Built with React.js for a responsive web-based interface.
+o
+
+Agent Mobile App:
+
+o
+Developed using React Native for a mobile-first experience on both Android and iOS.
+o
+Backend
+
+Framework:
+
+o
+Spring Boot (Java) for the RESTful API.
+o
+
+API Communication:
+
+o
+RESTful endpoints ensure smooth communication between the frontend and backend.
+o
+Database
+
+Database Engine:
+
+o
+PostgreSQL or MySQL.
+o
+
+User Table Fields:
+
+o
+ID
+o
+o
+firstName
+o
+o
+lastName
+o
+o
+email
+o
+o
+workId
+o
+o
+role (Admin, Manager, Agent)
+o
+o
+nationalId
+o
+o
+phoneNumber
+o
+Security & Authentication
+
+JWT Tokens:
+
+o
+Used for secure login and session handling.
+o
+
+Role-Based Access Control (RBAC):
+
+o
+Enforced via middleware to restrict endpoint access based on the user’s role.
+o
+
+Optional Passwords:
+
+o
+Passwords are only managed if the user opts in; otherwise, authentication is based solely on Work ID and email.
+o
+Email & Notifications
+
+Email Integration:
+
+o
+Utilizes Spring Boot’s email libraries (or services like SendGrid) to send notifications.
+o
+
+Notifications:
+
+o
+Managers: Receive notifications about agent activity.
+o
+o
+Agents: Receive automated reminders (e.g., attendance alerts).
+o
+o
+Unrecognized Login Attempts: Trigger email help requests to be sent to Admin.
+o
+
+5. API System Design Overview
+The API system is organized into several logical modules with endpoints structured for each user role:
+Authentication Module
+
+Endpoints:
+
+o
+POST /auth/login
+o
+o
+POST /auth/help
+o
+Admin Module
+
+Endpoints:
+
+o
+POST /admin/managers – Add a Manager
+o
+o
+DELETE /admin/managers/{managerId} – Remove a Manager
+o
+o
+GET /admin/managers – List all Managers with their Agents
+o
+Manager Module
+
+Endpoints:
+
+o
+POST /manager/agents – Add an Agent
+o
+o
+DELETE /manager/agents/{agentId} – Remove an Agent
+o
+o
+POST /manager/agents/{agentId}/assign-leader – Appoint an Agent Leader
+o
+o
+GET /manager/reports – View attendance and performance reports
+o
+Agent Module
+
+Endpoints:
+
+o
+POST /agent/attendance – Mark attendance
+o
+o
+POST /agent/clients – Add client details
+o
+o
+GET /agent/reports – Retrieve performance reports
+o
