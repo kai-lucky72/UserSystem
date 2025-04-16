@@ -19,6 +19,9 @@ import HelpRequests from "@/pages/admin/help-requests";
 // Manager and agent pages
 import ManagerDashboard from "@/pages/manager/dashboard";
 import AgentDashboard from "@/pages/agent/dashboard";
+import AgentAttendance from "@/pages/agent/attendance";
+import AgentClients from "@/pages/agent/clients";
+import AgentPerformance from "@/pages/agent/performance";
 
 function Router() {
   return (
