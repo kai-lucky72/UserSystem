@@ -152,10 +152,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         managerId,
       });
       
-      // Check if workId is already taken
-      const existingUser = await storage.getUserByWorkId(agentData.workId);
-      if (existingUser) {
+      // Check if workId or email is already taken
+      const [existingWorkId, existingEmail] = await Promise.all([
+        storage.getUserByWorkId(agentData.workId),
+        storage.getUserByEmail(agentData.email)
+      ]);
+      
+      if (existingWorkId) {
         return res.status(400).json({ message: "Work ID already exists" });
+      }
+      
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
       }
 
       // Hash the password if provided
