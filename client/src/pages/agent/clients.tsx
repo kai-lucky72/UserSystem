@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -9,6 +8,14 @@ import { Button } from "@/components/ui/button";
 import { AddClientModal } from "@/components/modals/add-client-modal";
 import { formatDate } from "@/utils/date-utils";
 import type { Client } from "@shared/schema";
+import { Clock } from "lucide-react";
+
+// Define interface for attendance status
+interface AttendanceStatus {
+  marked: boolean;
+  time?: string;
+  attendance?: any;
+}
 
 export default function AgentClients() {
   const { user } = useAuth();
@@ -17,6 +24,11 @@ export default function AgentClients() {
 
   const { data: clients, isLoading } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
+  });
+
+  // Get current attendance status
+  const { data: attendanceStatus, isLoading: isLoadingAttendance } = useQuery<AttendanceStatus>({
+    queryKey: ["/api/attendance/status"],
   });
 
   return (
@@ -56,7 +68,20 @@ export default function AgentClients() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-semibold">My Clients</h2>
-                <Button onClick={() => setShowAddClientModal(true)}>Add Client</Button>
+                <div>
+                  <Button 
+                    onClick={() => setShowAddClientModal(true)}
+                    disabled={!attendanceStatus?.marked}
+                  >
+                    Add Client
+                  </Button>
+                  {!attendanceStatus?.marked && (
+                    <p className="text-sm text-amber-600 mt-2 flex items-center justify-end">
+                      <Clock className="inline h-4 w-4 mr-1" />
+                      Mark attendance first
+                    </p>
+                  )}
+                </div>
               </div>
               
               {isLoading ? (
@@ -74,9 +99,9 @@ export default function AgentClients() {
                       <CardContent className="py-4">
                         <div className="flex justify-between items-center">
                           <div>
-                            <h3 className="font-medium">{client.name}</h3>
+                            <h3 className="font-medium">{client.firstName} {client.lastName}</h3>
                             <p className="text-sm text-gray-500">{client.email}</p>
-                            <p className="text-sm text-gray-500">{client.phoneNumber}</p>
+                            <p className="text-sm text-gray-500">{client.phone}</p>
                           </div>
                           <div className="text-sm text-gray-500">
                             Added on {formatDate(new Date(client.createdAt))}

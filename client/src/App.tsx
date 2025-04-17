@@ -31,6 +31,7 @@ import AgentAttendance from "@/pages/agent/attendance";
 import AgentClients from "@/pages/agent/clients";
 import AgentPerformance from "@/pages/agent/performance";
 import DailyReportPage from "@/pages/agent/daily-report";
+import ManagerInfoPage from "@/pages/agent/manager-info";
 
 // WebSocket connection component
 function WebSocketConnection() {
@@ -67,6 +68,7 @@ function Router() {
       <AgentRoute path="/agent/clients" component={AgentClients} />
       <AgentRoute path="/agent/performance" component={AgentPerformance} />
       <AgentRoute path="/agent/daily-report" component={DailyReportPage} />
+      <AgentRoute path="/agent/manager-info" component={ManagerInfoPage} />
       
       <Route component={NotFound} />
     </Switch>
