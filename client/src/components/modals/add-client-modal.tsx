@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { InsertClient, insertClientSchema } from "@shared/schema";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -23,14 +23,40 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useEffect } from "react";
 
 interface AddClientModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+// Define attendance status interface
+interface AttendanceStatus {
+  marked: boolean;
+  time?: string;
+  attendance?: any;
+}
+
 export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
   const { toast } = useToast();
+  
+  // Get attendance status to verify attendance is marked
+  const { data: attendanceStatus } = useQuery<AttendanceStatus>({
+    queryKey: ["/api/attendance/status"],
+    enabled: open, // Only fetch when modal is open
+  });
+  
+  // Check attendance status when modal opens
+  useEffect(() => {
+    if (open && attendanceStatus && !attendanceStatus.marked) {
+      toast({
+        title: "Attendance Required",
+        description: "You must mark your attendance before adding clients.",
+        variant: "destructive",
+      });
+      onOpenChange(false);
+    }
+  }, [open, attendanceStatus, toast, onOpenChange]);
   
   const form = useForm<InsertClient>({
     resolver: zodResolver(insertClientSchema.omit({ agentId: true })),
@@ -46,6 +72,14 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
 
   const addClientMutation = useMutation({
     mutationFn: async (data: Omit<InsertClient, "agentId">) => {
+      // Double check attendance status before attempting to add client
+      const attendanceRes = await apiRequest("GET", "/api/attendance/status");
+      const attendanceData = await attendanceRes.json();
+      
+      if (!attendanceData.marked) {
+        throw new Error("You must mark your attendance before adding clients");
+      }
+      
       const res = await apiRequest("POST", "/api/clients", data);
       return await res.json();
     },
