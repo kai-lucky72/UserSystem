@@ -69,7 +69,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -80,7 +80,7 @@ export default function AuthPage() {
           </p>
         </div>
 
-        <Card>
+        <Card className="shadow-lg">
           <CardContent className="pt-6">
             <form className="space-y-4" onSubmit={loginForm.handleSubmit(onLoginSubmit)}>
               <div className="space-y-1">
@@ -88,6 +88,8 @@ export default function AuthPage() {
                 <Input 
                   id="workId" 
                   placeholder="Enter your Work ID"
+                  className="w-full py-2 px-3"
+                  autoComplete="username"
                   {...loginForm.register("workId")}
                 />
                 {loginForm.formState.errors.workId && (
@@ -101,6 +103,8 @@ export default function AuthPage() {
                   id="email" 
                   type="text" 
                   placeholder="Enter your email"
+                  className="w-full py-2 px-3"
+                  autoComplete="email"
                   {...loginForm.register("email")}
                 />
                 {loginForm.formState.errors.email && (
@@ -114,6 +118,8 @@ export default function AuthPage() {
                   id="password" 
                   type="password" 
                   placeholder="Only required if previously set"
+                  className="w-full py-2 px-3"
+                  autoComplete="current-password"
                   {...loginForm.register("password")}
                 />
                 {loginForm.formState.errors.password && (
@@ -133,7 +139,7 @@ export default function AuthPage() {
               
               <Button 
                 type="submit" 
-                className="w-full"
+                className="w-full py-2"
                 disabled={loginMutation.isPending}
               >
                 {loginMutation.isPending ? "Signing in..." : "Sign in"}

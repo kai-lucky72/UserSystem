@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -73,12 +74,35 @@ function Router() {
 }
 
 function App() {
+  // Add viewport meta tag for proper mobile rendering
+  useEffect(() => {
+    // Ensure the viewport meta tag exists with proper settings
+    let viewportMeta = document.querySelector('meta[name="viewport"]');
+    if (!viewportMeta) {
+      viewportMeta = document.createElement('meta');
+      viewportMeta.setAttribute('name', 'viewport');
+      document.head.appendChild(viewportMeta);
+    }
+    viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover');
+    
+    // Add theme-color meta for mobile browsers
+    let themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeColorMeta) {
+      themeColorMeta = document.createElement('meta');
+      themeColorMeta.setAttribute('name', 'theme-color');
+      document.head.appendChild(themeColorMeta);
+    }
+    themeColorMeta.setAttribute('content', '#4f46e5'); // Primary color
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router />
-        <WebSocketConnection />
-        <Toaster />
+        <div className="mobile-no-overflow">
+          <Router />
+          <WebSocketConnection />
+          <Toaster />
+        </div>
       </AuthProvider>
     </QueryClientProvider>
   );

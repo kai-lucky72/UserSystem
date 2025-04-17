@@ -2,6 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Improve mobile input focus by increasing tap targets */
+@media (max-width: 768px) {
+  input, 
+  select, 
+  textarea, 
+  button {
+    font-size: 16px; /* Prevents iOS zooming on focus */
+  }
+
+  .input-touch-target {
+    min-height: 44px; /* Apple Human Interface Guidelines recommend */
+  }
+  
+  /* Add some spacing for better touch targets */
+  .mobile-spaced-y > * {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Prevent horizontal overflow on mobile */
+  .mobile-no-overflow {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
+
+/* Fix issues with fixed position elements on mobile */
+.fixed-safe {
+  position: fixed;
+  top: env(safe-area-inset-top, 0);
+  bottom: env(safe-area-inset-bottom, 0);
+  left: env(safe-area-inset-left, 0);
+  right: env(safe-area-inset-right, 0);
+}
+
 @layer base {
   * {
     @apply border-border;
