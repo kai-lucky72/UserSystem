@@ -111,30 +111,29 @@ export function Sidebar({ className }: SidebarProps) {
           </div>
         </Link>
       </div>
-      
+
       <div className="flex flex-col flex-grow">
         <nav className="flex-1 px-2 py-4 space-y-1">
           {navItems.map((item, index) => (
-            <Link key={index} href={item.href}>
-              <div
-                className={cn(
-                  "flex items-center px-2 py-2 text-sm font-medium rounded-md group cursor-pointer",
-                  location === item.href
-                    ? "text-white bg-gray-900"
-                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                )}
-              >
-                {item.icon}
-                {item.label}
-                {location === item.href && (
-                  <ChevronRight className="ml-auto h-4 w-4" />
-                )}
-              </div>
-            </Link>
+            <div
+              onClick={() => navigate(item.href)}
+              className={cn(
+                "flex items-center px-2 py-2 text-sm font-medium rounded-md group cursor-pointer",
+                location === item.href
+                  ? "text-white bg-gray-900"
+                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
+              )}
+            >
+              {item.icon}
+              {item.label}
+              {location === item.href && (
+                <ChevronRight className="ml-auto h-4 w-4" />
+              )}
+            </div>
           ))}
         </nav>
       </div>
-      
+
       <div className="p-4 border-t border-gray-700">
         <div className="flex items-center">
           <Avatar className="h-10 w-10 border-2 border-gray-700">

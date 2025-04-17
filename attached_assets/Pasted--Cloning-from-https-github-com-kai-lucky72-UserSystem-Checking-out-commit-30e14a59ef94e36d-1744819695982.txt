@@ -1,0 +1,66 @@
+==> Cloning from https://github.com/kai-lucky72/UserSystem
+==> Checking out commit 30e14a59ef94e36d3e599151c80553a3a0219758 in branch main
+==> Using Node.js version 22.14.0 (default)
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Using Bun version 1.1.0 (default)
+==> Docs on specifying a bun version: https://render.com/docs/bun-version
+==> Running build command 'npm install; npm run build'...
+added 476 packages, and audited 477 packages in 9s
+60 packages are looking for funding
+  run `npm fund` for details
+8 moderate severity vulnerabilities
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+Run `npm audit` for details.
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+vite v5.4.14 building for production...
+transforming...
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 2962 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/public/index.html                   1.84 kB │ gzip:   0.75 kB
+../dist/public/assets/index-CYwOhgdU.css   64.90 kB │ gzip:  11.24 kB
+../dist/public/assets/index-cC4RJdKN.js   977.07 kB │ gzip: 275.95 kB
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 7.05s
+  dist/index.js  29.5kb
+⚡ Done in 6ms
+==> Uploading build...
+==> Uploaded in 8.1s. Compression took 2.9s
+==> Build successful 🎉
+==> Deploying...
+==> Running 'npm run start'
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+file:///opt/render/project/src/dist/index.js:109
+  throw new Error(
+        ^
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at file:///opt/render/project/src/dist/index.js:109:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:271:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:578:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5)
+Node.js v22.14.0
+==> Exited with status 1
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+==> Running 'npm run start'
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+file:///opt/render/project/src/dist/index.js:109
+  throw new Error(
+        ^
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at file:///opt/render/project/src/dist/index.js:109:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:271:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:578:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5)
+Node.js v22.14.0

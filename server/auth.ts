@@ -47,6 +47,23 @@ declare global {
   }
 }
 
+const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
+
+const rateLimit = (ip: string): boolean => {
+  const now = Date.now();
+  const attempt = loginAttempts.get(ip) || { count: 0, lastAttempt: now };
+  
+  if (now - attempt.lastAttempt > 15 * 60 * 1000) { // Reset after 15 min
+    loginAttempts.set(ip, { count: 1, lastAttempt: now });
+    return true;
+  }
+  
+  if (attempt.count >= 5) return false;
+  
+  loginAttempts.set(ip, { count: attempt.count + 1, lastAttempt: now });
+  return true;
+};
+
 export function setupAuth(app: Express) {
   // Debug middleware - remove in production
   app.use((req, res, next) => {
