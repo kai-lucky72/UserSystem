@@ -10,7 +10,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "setup": "tsx scripts/setup_db.ts",
-    "postinstall": "npm run db:push"
+    "postinstall": "if [ \"$NODE_ENV\" != \"production\" ]; then npm run db:push; fi"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

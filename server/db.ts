@@ -2,6 +2,7 @@ import pkg from 'pg';
 const { Pool } = pkg;
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -9,10 +10,6 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-<<<<<<< HEAD
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
-=======
 const connectWithRetry = async () => {
   const maxRetries = 5;
   let retries = 0;
@@ -32,6 +29,18 @@ const connectWithRetry = async () => {
   throw new Error('Failed to connect to database after multiple retries');
 };
 
-export const pool = await connectWithRetry();
-export const db = drizzle({ client: pool, schema });
->>>>>>> 419bcb26836e84d26f1f3a06d49a1102fc331566
+// Initialize pool and db with proper types
+export let pool: pkg.Pool;
+export let db: NodePgDatabase<typeof schema>;
+
+// Initialize database connection
+const initDb = async () => {
+  pool = await connectWithRetry();
+  db = drizzle(pool, { schema });
+};
+
+// Call initialization
+initDb().catch(err => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
+});

@@ -3,7 +3,7 @@ services:
   - type: web
     name: usersystem
     env: node
-    buildCommand: npm install && npm run build
+    buildCommand: NODE_ENV=production npm install && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
@@ -17,6 +17,7 @@ services:
           property: connectionString
       - key: SESSION_SECRET
         generateValue: true
+    postDeployCommand: node scripts/init_render_db.js
 
   # Database service
 databases:
