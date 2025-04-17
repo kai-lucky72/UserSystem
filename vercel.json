@@ -1,4 +1,3 @@
-
 {
   "version": 2,
   "builds": [
@@ -10,7 +9,8 @@
       "src": "client/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist/public"
+        "buildCommand": "npm run build",
+        "outputDirectory": "dist"
       }
     }
   ],
@@ -20,8 +20,15 @@
       "dest": "server/index.ts"
     },
     {
+      "src": "/ws",
+      "dest": "server/index.ts"
+    },
+    {
       "src": "/(.*)",
-      "dest": "client/index.html"
+      "dest": "client/dist/$1"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }

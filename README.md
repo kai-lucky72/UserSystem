@@ -40,7 +40,9 @@ A complete user management system for managing agents, attendance, clients, and 
    npm run dev
    ```
 
-## Deployment on Render.com
+## Deployment Options
+
+### Option 1: Render.com
 
 This application can be easily deployed on Render.com using the provided `render.yaml` file:
 
@@ -53,7 +55,7 @@ This application can be easily deployed on Render.com using the provided `render
    - PostgreSQL database
    - Environment variables
 
-### Post-Deployment Configuration
+#### Post-Deployment Configuration (Render)
 
 After deploying to Render:
 
@@ -66,6 +68,29 @@ After deploying to Render:
    - Admin: workId: ADM001, email: admin@example.com, password: admin123
    - Manager: workId: MGR001, email: manager@example.com, password: manager123
    - Agent: workId: AGT001, email: agent@example.com, password: agent123
+
+### Option 2: Vercel
+
+This application can also be deployed to Vercel using the provided `vercel.json` file:
+
+1. Push your code to a GitHub repository
+2. Create a Vercel account if you don't have one already
+3. Create a new project on Vercel and import your GitHub repository
+4. **Important**: Set up an external PostgreSQL database (Vercel doesn't provide database hosting)
+   - Options include: [Neon](https://neon.tech), [Supabase](https://supabase.com), or [Railway](https://railway.app)
+5. Add the following environment variables in Vercel's dashboard:
+   - `DATABASE_URL`: Your PostgreSQL connection string
+   - `SESSION_SECRET`: A secure random string for session encryption
+
+#### Post-Deployment Configuration (Vercel)
+
+After deploying to Vercel:
+
+1. Set up your database schema:
+   - Run locally: `DATABASE_URL=your_production_db_url npm run db:push`
+   - Or use the Vercel CLI to run: `vercel run npx tsx scripts/create_daily_reports_table.ts`
+
+2. The same default credentials will be created as in the Render deployment.
 
 ## License
 
