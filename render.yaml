@@ -17,7 +17,7 @@ services:
           property: connectionString
       - key: SESSION_SECRET
         generateValue: true
-    postDeployCommand: node scripts/init_render_db.js
+    postDeployCommand: chmod +x scripts/create_tables.sh && ./scripts/create_tables.sh
 
   # Database service
 databases:

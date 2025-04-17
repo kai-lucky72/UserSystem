@@ -33,22 +33,78 @@ const PostgresSessionStore = connectPgSimple(session);
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
+  private isDbReady: boolean = false;
+  private dbInitRetries: number = 0;
+  private maxRetries: number = 10;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({ 
-      pool,
-      createTableIfMissing: true 
+    // Use a session store that doesn't require immediate database connection
+    this.sessionStore = new session.MemoryStore({
+      checkPeriod: 86400000 // 24 hours
     });
     
-    // Initialize default users if they don't exist
-    this.initializeDefaultUsers().catch(err => {
-      console.error('Error initializing default users:', err);
+    // Initialize default users only after database connection is established
+    this.initDatabase().catch(err => {
+      console.error('Error initializing database connection:', err);
     });
   }
 
+  private async initDatabase() {
+    try {
+      // Wait for the database to be available
+      while (!this.isDbReady && this.dbInitRetries < this.maxRetries) {
+        try {
+          this.dbInitRetries++;
+          console.log(`Database init attempt ${this.dbInitRetries}/${this.maxRetries}...`);
+          
+          // Test if the database is available
+          await db.select().from(users).limit(1);
+          
+          // If we get here, the database is ready
+          this.isDbReady = true;
+          console.log('Database connection established successfully.');
+          
+          // Now initialize session store with the proper PostgreSQL store
+          if (pool) {
+            this.sessionStore = new PostgresSessionStore({ 
+              pool,
+              createTableIfMissing: true 
+            });
+            console.log('PostgreSQL session store initialized.');
+          }
+          
+          // Now we can initialize default users
+          await this.initializeDefaultUsers();
+          return;
+        } catch (err) {
+          console.warn(`Database not ready yet (attempt ${this.dbInitRetries}/${this.maxRetries}): ${err}`);
+          if (this.dbInitRetries >= this.maxRetries) {
+            console.error('Max database connection attempts reached. Continuing with limited functionality.');
+            break;
+          }
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to initialize database:', error);
+    }
+  }
+
+  // Ensure database is ready before attempting operations
+  private async ensureDbReady() {
+    if (!this.isDbReady) {
+      console.warn('Database not yet ready. Operation may fail.');
+      return false;
+    }
+    return true;
+  }
+  
   // Initialize default users if they don't exist
   async initializeDefaultUsers() {
     try {
+      if (!await this.ensureDbReady()) return;
+      
       // Check if admin user exists
       const adminQuery = "SELECT * FROM users WHERE email = 'admin@example.com'";
       const adminResult = await pool.query(adminQuery);
