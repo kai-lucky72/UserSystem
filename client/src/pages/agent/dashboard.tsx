@@ -62,7 +62,13 @@ export default function AgentDashboard() {
 
   // Get attendance timeframe set by the manager
   const { data: timeFrame, isLoading: isLoadingTimeFrame } = useQuery<AttendanceTimeFrame>({
-    queryKey: ["/api/attendance-timeframe"],
+    queryKey: ["/api/attendance-timeframe/agent"],
+    queryFn: async () => {
+      // Get the timeframe specifically set for this agent by their manager
+      const res = await fetch("/api/attendance-timeframe/agent");
+      if (!res.ok) throw new Error("Failed to fetch attendance timeframe");
+      return res.json();
+    },
   });
 
   // Get agent's clients

@@ -569,13 +569,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get agent's manager info
   app.get("/api/manager-info", async (req, res, next) => {
     try {
-      if (req.user!.role !== UserRole.AGENT) {
-        return res.status(403).json({ message: "Only agents can view their manager info" });
-      }
-      
+      // Get the user's info to find their manager
       const agent = await storage.getUser(req.user!.id);
       if (!agent || !agent.managerId) {
-        return res.status(400).json({ message: "Agent has no manager assigned" });
+        return res.status(400).json({ message: "User has no manager assigned" });
       }
       
       const manager = await storage.getUser(agent.managerId);
@@ -1051,6 +1048,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json(attendanceRecords);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Get attendance timeframe for agents (uses their manager's timeframe)
+  app.get("/api/attendance-timeframe/agent", async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // Get the agent's manager ID
+      const agent = await storage.getUser(req.user.id);
+      if (!agent || !agent.managerId) {
+        return res.status(400).json({ message: "Agent has no manager assigned" });
+      }
+      
+      // Get attendance timeframe set by the agent's manager
+      const timeFrame = await storage.getAttendanceTimeFrameByManagerId(agent.managerId);
+      if (!timeFrame) {
+        return res.json({ 
+          startTime: "06:00", // Default start time
+          endTime: "09:00"    // Default end time
+        });
+      }
+      
+      res.json(timeFrame);
     } catch (error) {
       next(error);
     }
