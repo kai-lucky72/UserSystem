@@ -66,11 +66,16 @@ export class DatabaseStorage implements IStorage {
           
           // Now initialize session store with the proper PostgreSQL store
           if (pool) {
-            this.sessionStore = new PostgresSessionStore({ 
-              pool,
-              createTableIfMissing: true 
-            });
-            console.log('PostgreSQL session store initialized.');
+            try {
+              this.sessionStore = new PostgresSessionStore({ 
+                pool,
+                createTableIfMissing: true 
+              });
+              console.log('PostgreSQL session store initialized.');
+            } catch (sessionErr) {
+              console.error('Failed to initialize PostgreSQL session store:', sessionErr);
+              console.log('Continuing with memory session store.');
+            }
           }
           
           // Now we can initialize default users
@@ -103,94 +108,87 @@ export class DatabaseStorage implements IStorage {
   // Initialize default users if they don't exist
   async initializeDefaultUsers() {
     try {
-      if (!await this.ensureDbReady()) return;
-      
-      // Check if admin user exists
-      const adminQuery = "SELECT * FROM users WHERE email = 'admin@example.com'";
-      const adminResult = await pool.query(adminQuery);
-      
-      // Check if manager user exists
-      const managerQuery = "SELECT * FROM users WHERE email = 'manager@example.com'";
-      const managerResult = await pool.query(managerQuery);
-      
-      // Check if agent user exists
-      const agentQuery = "SELECT * FROM users WHERE email = 'agent@example.com'";
-      const agentResult = await pool.query(agentQuery);
-      
-      let adminId = null;
-      let managerId = null;
-      
-      // If all users exist, we're done
-      if (adminResult.rows.length > 0 && managerResult.rows.length > 0 && agentResult.rows.length > 0) {
-        log('All default users already exist');
+      if (!await this.ensureDbReady()) {
+        console.log('Database not ready - skipping default user creation');
         return;
       }
       
-      log('Creating default users...');
+      console.log('Checking for default users...');
       
-      // Create admin user if it doesn't exist
-      if (adminResult.rows.length === 0) {
+      // Create admin if doesn't exist
+      let adminUser = await this.getUserByEmail('admin@example.com');
+      if (!adminUser) {
+        console.log('Creating admin user...');
         const adminPassword = await hashPassword('admin123');
-        const createAdminQuery = `
-          INSERT INTO users (
-            first_name, last_name, email, work_id, national_id, 
-            phone_number, password, role, is_leader
-          ) 
-          VALUES (
-            'Admin', 'User', 'admin@example.com', 'ADM001', '1234567890', 
-            '1234567890', $1, 'admin', false
-          ) 
-          RETURNING id`;
         
-        const adminInsertResult = await pool.query(createAdminQuery, [adminPassword]);
-        adminId = adminInsertResult.rows[0].id;
-        log('Admin user created successfully');
+        adminUser = await this.createUser({
+          firstName: 'Admin',
+          lastName: 'User',
+          email: 'admin@example.com',
+          workId: 'ADM001',
+          nationalId: '1234567890',
+          phoneNumber: '1234567890',
+          password: adminPassword,
+          role: UserRole.ADMIN,
+          isLeader: false
+        });
+        
+        console.log('Admin user created successfully with ID:', adminUser.id);
       } else {
-        adminId = adminResult.rows[0].id;
+        console.log('Admin user already exists with ID:', adminUser.id);
       }
-      
-      // Create manager user if it doesn't exist
-      if (managerResult.rows.length === 0) {
+
+      // Create manager if doesn't exist
+      let managerUser = await this.getUserByEmail('manager@example.com');
+      if (!managerUser) {
+        console.log('Creating manager user...');
         const managerPassword = await hashPassword('manager123');
-        const createManagerQuery = `
-          INSERT INTO users (
-            first_name, last_name, email, work_id, national_id, 
-            phone_number, password, role, is_leader
-          ) 
-          VALUES (
-            'Manager', 'User', 'manager@example.com', 'MGR001', '0987654321', 
-            '0987654321', $1, 'manager', false
-          ) 
-          RETURNING id`;
         
-        const managerInsertResult = await pool.query(createManagerQuery, [managerPassword]);
-        managerId = managerInsertResult.rows[0].id;
-        log('Manager user created successfully');
+        managerUser = await this.createUser({
+          firstName: 'Manager',
+          lastName: 'User',
+          email: 'manager@example.com',
+          workId: 'MGR001',
+          nationalId: '0987654321',
+          phoneNumber: '0987654321',
+          password: managerPassword,
+          role: UserRole.MANAGER,
+          isLeader: false
+        });
+        
+        console.log('Manager user created successfully with ID:', managerUser.id);
       } else {
-        managerId = managerResult.rows[0].id;
+        console.log('Manager user already exists with ID:', managerUser.id);
       }
-      
-      // Create agent user if it doesn't exist
-      if (agentResult.rows.length === 0) {
+
+      // Create agent if doesn't exist
+      const agentUser = await this.getUserByEmail('agent@example.com');
+      if (!agentUser && managerUser) {
+        console.log('Creating agent user...');
         const agentPassword = await hashPassword('agent123');
-        const createAgentQuery = `
-          INSERT INTO users (
-            first_name, last_name, email, work_id, national_id, 
-            phone_number, password, role, manager_id, is_leader
-          ) 
-          VALUES (
-            'Agent', 'User', 'agent@example.com', 'AGT001', '1122334455', 
-            '1122334455', $1, 'agent', $2, false
-          )`;
         
-        await pool.query(createAgentQuery, [agentPassword, managerId]);
-        log('Agent user created successfully');
+        const agent = await this.createUser({
+          firstName: 'Agent',
+          lastName: 'User',
+          email: 'agent@example.com',
+          workId: 'AGT001',
+          nationalId: '1122334455',
+          phoneNumber: '1122334455',
+          password: agentPassword,
+          role: UserRole.AGENT,
+          managerId: managerUser.id, // Link to the manager
+          isLeader: false
+        });
+        
+        console.log('Agent user created successfully with ID:', agent.id);
+      } else if (agentUser) {
+        console.log('Agent user already exists with ID:', agentUser.id);
+      } else {
+        console.log('Cannot create agent: Manager user not found');
       }
       
-      log('Default users setup completed');
     } catch (err) {
-      console.error('Error initializing default users:', err);
-      // Log but don't throw - we want the app to start even if user creation fails
+      console.error('Error during default user creation:', err);
     }
   }
 
