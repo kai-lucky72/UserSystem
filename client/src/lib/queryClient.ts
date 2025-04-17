@@ -2,8 +2,15 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    try {
+      // Try to parse JSON error response
+      const errorData = await res.json();
+      throw new Error(errorData.message || `${res.status}: ${res.statusText}`);
+    } catch (jsonError) {
+      // Fall back to text if not JSON
+      const text = await res.text().catch(() => res.statusText);
+      throw new Error(`${res.status}: ${text}`);
+    }
   }
 }
 
@@ -12,10 +19,18 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Replace any undefined values with empty strings
+  let processedData = data;
+  if (data && typeof data === 'object') {
+    processedData = JSON.parse(
+      JSON.stringify(data, (key, value) => (value === undefined ? "" : value))
+    );
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers: processedData ? { "Content-Type": "application/json" } : {},
+    body: processedData ? JSON.stringify(processedData) : undefined,
     credentials: "include",
   });
 

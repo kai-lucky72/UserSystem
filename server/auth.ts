@@ -6,6 +6,7 @@ import { UserRole, User, loginSchema, helpRequestSchema } from "@shared/schema";
 import { storage } from "./storage";
 import { scrypt, timingSafeEqual, randomBytes } from "crypto";
 import { promisify } from "util";
+import debug from "debug";
 
 const scryptAsync = promisify(scrypt);
 
@@ -47,6 +48,27 @@ declare global {
 }
 
 export function setupAuth(app: Express) {
+  // Debug middleware - remove in production
+  app.use((req, res, next) => {
+    debug(`${req.method} ${req.url}`);
+    next();
+  });
+  
+  // Add cache control headers to prevent browsers from caching user-specific data
+  app.use((req, res, next) => {
+    // Add cache control headers to prevent caching of user-specific data
+    if (req.path.includes('/api/') && (
+        req.path.includes('/attendance') || 
+        req.path.includes('/clients') || 
+        req.path.includes('/user')
+      )) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+    next();
+  });
+
   // Configure session
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "team-management-system-secret",
@@ -73,40 +95,55 @@ export function setupAuth(app: Express) {
     async (req, workId, password, done) => {
       try {
         const email = req.body.email;
+        
+        // Validate email is present
+        if (!email) {
+          console.log('Email is missing from request');
+          return done(null, false, { message: "Email is required" });
+        }
+        
+        console.log(`Authenticating: workId=${workId}, email=${email}, hasPassword=${!!password}`);
+        
+        // Find the user by workId and email
         const user = await storage.getUserByWorkIdAndEmail(workId, email);
         
+        // If no user found, authentication fails
         if (!user) {
+          console.log('No user found with the provided credentials');
           return done(null, false, { message: "Invalid credentials" });
         }
-
-        // For agents and managers, allow login without password
-        if (user.role === UserRole.AGENT || user.role === UserRole.MANAGER) {
-          return done(null, user);
-        }
-
+        
+        console.log(`Found user: ${user.firstName} ${user.lastName} (${user.role}), hasPassword=${!!user.password}`);
+        
         // If user has no password set, allow login without password
         if (!user.password) {
+          console.log('User has no password, allowing login');
           return done(null, user);
         }
         
-        // If user has a password set but none provided
+        // If user has a password but none provided, authentication fails
         if (!password) {
-          return done(null, false, { message: "Password required" });
+          console.log('Password required but not provided');
+          return done(null, false, { message: "Password is required for this account" });
         }
         
+        // Compare passwords
         try {
-          // Compare passwords securely
           const passwordMatches = await comparePasswords(password, user.password);
+          
           if (!passwordMatches) {
+            console.log('Password does not match');
             return done(null, false, { message: "Invalid password" });
           }
+          
+          console.log('Password verified successfully');
+          return done(null, user);
         } catch (error) {
-          console.error("Password comparison error:", error);
+          console.error('Error comparing passwords:', error);
           return done(null, false, { message: "Authentication error" });
         }
-
-        return done(null, user);
       } catch (error) {
+        console.error('Unexpected authentication error:', error);
         return done(error);
       }
     }
@@ -125,28 +162,85 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Login route
-  app.post("/api/login", (req, res, next) => {
+  // Use a custom authentication function instead of passport.authenticate in login route
+  const customAuthenticate = async (req: any, res: any, next: any) => {
+    // Log the raw request for debugging
+    console.log('Raw login request body:', JSON.stringify(req.body));
+    
+    // Ensure we have the required fields
+    if (!req.body.workId || !req.body.email) {
+      return res.status(401).json({ message: "Work ID and email are required" });
+    }
+
+    // Clean up password field
+    req.body.password = req.body.password || "";
+    
+    // Log the processed request
+    console.log('Processed login request:', {
+      workId: req.body.workId,
+      email: req.body.email,
+      hasPassword: !!req.body.password
+    });
+
+    // Validate input using schema
     const result = loginSchema.safeParse(req.body);
     if (!result.success) {
       return res.status(400).json({ errors: result.error.issues });
     }
 
-    passport.authenticate("local", (err: any, user: User, info: any) => {
-      if (err) {
-        return next(err);
+    // Find the user
+    const user = await storage.getUserByWorkIdAndEmail(req.body.workId, req.body.email);
+    
+    if (!user) {
+      console.log('No user found with the provided credentials');
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+    
+    console.log(`Found user: ${user.firstName} ${user.lastName} (${user.role}), hasPassword=${!!user.password}`);
+    
+    // If user has no password, allow login
+    if (!user.password) {
+      console.log('User has no password, allowing login');
+      return finishLogin(req, res, next, user);
+    }
+    
+    // If user has a password but none provided, authentication fails
+    if (!req.body.password) {
+      console.log('Password required but not provided');
+      return res.status(401).json({ message: "Password is required for this account" });
+    }
+    
+    // Compare passwords
+    try {
+      const passwordMatches = await comparePasswords(req.body.password, user.password);
+      
+      if (!passwordMatches) {
+        console.log('Password does not match');
+        return res.status(401).json({ message: "Invalid password" });
       }
-      if (!user) {
-        return res.status(401).json({ message: info?.message || "Authentication failed" });
+      
+      console.log('Password verified successfully');
+      return finishLogin(req, res, next, user);
+    } catch (error) {
+      console.error('Error comparing passwords:', error);
+      return res.status(500).json({ message: "Authentication error" });
+    }
+  };
+  
+  // Helper to finish the login process
+  const finishLogin = (req: any, res: any, next: any, user: User) => {
+    req.login(user, (loginErr: any) => {
+      if (loginErr) {
+        console.error('Login error:', loginErr);
+        return next(loginErr);
       }
-      req.login(user, (loginErr) => {
-        if (loginErr) {
-          return next(loginErr);
-        }
-        return res.status(200).json(user);
-      });
-    })(req, res, next);
-  });
+      console.log('User authenticated successfully:', user.id, user.role);
+      return res.status(200).json(user);
+    });
+  };
+  
+  // Login route
+  app.post("/api/login", customAuthenticate);
 
   // Logout route
   app.post("/api/logout", (req, res, next) => {

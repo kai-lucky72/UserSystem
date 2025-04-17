@@ -11,6 +11,8 @@ import {
   User as UserIcon,
   ChevronRight,
   LogOut,
+  Settings,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -61,7 +63,9 @@ export function Sidebar({ className }: SidebarProps) {
           { href: "/manager/agents", label: "Manage Agents", icon: <Users className="mr-3 h-5 w-5" /> },
           { href: "/manager/attendance", label: "Attendance", icon: <Clock className="mr-3 h-5 w-5" /> },
           { href: "/manager/reports", label: "Performance Reports", icon: <BarChart3 className="mr-3 h-5 w-5" /> },
+          { href: "/manager/daily-reports", label: "View Daily Reports", icon: <FileText className="mr-3 h-5 w-5" /> },
           { href: "/manager/leader", label: "Agent Leader", icon: <UserCog className="mr-3 h-5 w-5" /> },
+          { href: "/manager/settings", label: "Settings", icon: <Settings className="mr-3 h-5 w-5" /> },
         ];
       case UserRole.AGENT:
         return [
@@ -69,6 +73,8 @@ export function Sidebar({ className }: SidebarProps) {
           { href: "/agent/attendance", label: "Attendance", icon: <Clock className="mr-3 h-5 w-5" /> },
           { href: "/agent/clients", label: "Clients", icon: <UserIcon className="mr-3 h-5 w-5" /> },
           { href: "/agent/performance", label: "Performance", icon: <BarChart3 className="mr-3 h-5 w-5" /> },
+          { href: "/agent/manager-info", label: "Manager Info", icon: <UserCog className="mr-3 h-5 w-5" /> },
+          { href: "/agent/daily-report", label: "Generate Daily Report", icon: <FileText className="mr-3 h-5 w-5" /> },
         ];
       default:
         return [];

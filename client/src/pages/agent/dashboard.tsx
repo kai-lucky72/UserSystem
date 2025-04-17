@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { AddClientModal } from "@/components/modals/add-client-modal";
+import { MarkAttendanceModal } from "@/components/modals/mark-attendance-modal";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Client, Attendance } from "@shared/schema";
@@ -13,16 +14,55 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDate, formatTime, isAttendanceTimeValid } from "@/utils/date-utils";
 
+// Define interfaces for API responses
+interface AttendanceStatus {
+  marked: boolean;
+  time?: string;
+  attendance?: Attendance;
+}
+
+interface AttendanceTimeFrame {
+  startTime: string;
+  endTime: string;
+  id?: number;
+  managerId?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface PerformanceReport {
+  totalClients: number;
+  recentClients: Client[];
+  attendanceRate: string;
+  averageResponseTime: string;
+  clientsThisMonth: number;
+}
+
 export default function AgentDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   
+  // Clear cache when user changes
+  useEffect(() => {
+    if (user) {
+      // Reset all queries in the cache to ensure data is not leaked between users
+      queryClient.invalidateQueries();
+    }
+  }, [user?.id]);
+  
   // Get current attendance status
-  const { data: attendanceStatus, isLoading: isLoadingAttendance } = useQuery({
-    queryKey: ["/api/attendance/status"],
+  const { data: attendanceStatus, isLoading: isLoadingAttendance } = useQuery<AttendanceStatus>({
+    queryKey: ["/api/attendance/status", user?.id],
+    enabled: !!user,
+  });
+
+  // Get attendance timeframe set by the manager
+  const { data: timeFrame, isLoading: isLoadingTimeFrame } = useQuery<AttendanceTimeFrame>({
+    queryKey: ["/api/attendance-timeframe"],
   });
 
   // Get agent's clients
@@ -31,31 +71,21 @@ export default function AgentDashboard() {
   });
 
   // Get performance reports
-  const { data: performanceReport, isLoading: isLoadingPerformance } = useQuery({
+  const { data: performanceReport, isLoading: isLoadingPerformance } = useQuery<PerformanceReport>({
     queryKey: ["/api/reports/performance"],
   });
 
-  // Mark attendance mutation
-  const markAttendanceMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/attendance", {});
-      return await res.json();
-    },
-    onSuccess: (data: Attendance) => {
-      toast({
-        title: "Success!",
-        description: "Your attendance has been marked successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/attendance/status"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  // Format time to 12-hour format (converting from 24-hour format)
+  const formatTimeFrame = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: minutes > 0 ? '2-digit' : undefined,
+      hour12: true
+    });
+  };
 
   // Update date and time every minute
   useEffect(() => {
@@ -66,22 +96,38 @@ export default function AgentDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Handle mark attendance button click
-  const handleMarkAttendance = () => {
-    if (!isAttendanceTimeValid(new Date())) {
+  // Handle opening the attendance modal
+  const handleOpenAttendanceModal = () => {
+    const startTime = timeFrame?.startTime || "06:00";
+    const endTime = timeFrame?.endTime || "09:00";
+    
+    if (!isAttendanceTimeValid(new Date(), startTime, endTime)) {
+      const startFormatted = formatTimeFrame(startTime);
+      const endFormatted = formatTimeFrame(endTime);
+      
       toast({
         title: "Outside valid hours",
-        description: "Attendance can only be marked between 6:00 AM and 9:00 AM.",
+        description: `Attendance can only be marked between ${startFormatted} and ${endFormatted}.`,
         variant: "destructive",
       });
       return;
     }
     
-    markAttendanceMutation.mutate();
+    setShowAttendanceModal(true);
   };
 
   // Get the recent clients (last 5)
   const recentClients = clients?.slice(-5).reverse() || [];
+
+  // Format timeframe for display
+  const startTimeFormatted = timeFrame ? formatTimeFrame(timeFrame.startTime) : "6:00 AM";
+  const endTimeFormatted = timeFrame ? formatTimeFrame(timeFrame.endTime) : "9:00 AM";
+  const timeFrameText = `Mark your daily attendance between ${startTimeFormatted} and ${endTimeFormatted}`;
+
+  // Check if current time is within the valid attendance time range
+  const isWithinTimeFrame = timeFrame ? 
+    isAttendanceTimeValid(new Date(), timeFrame.startTime, timeFrame.endTime) : 
+    isAttendanceTimeValid(new Date());
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
@@ -137,7 +183,7 @@ export default function AgentDashboard() {
                 <CardHeader className="px-6 flex-row justify-between items-center">
                   <div>
                     <CardTitle>Attendance</CardTitle>
-                    <p className="text-sm text-gray-500 mt-1">Mark your daily attendance between 6:00 AM and 9:00 AM</p>
+                    <p className="text-sm text-gray-500 mt-1">{timeFrameText}</p>
                   </div>
                   {attendanceStatus?.marked && (
                     <Badge variant="outline" className="bg-green-100 text-green-800 px-4 py-2">
@@ -147,24 +193,41 @@ export default function AgentDashboard() {
                 </CardHeader>
                 <CardContent className="border-t border-gray-200 px-6">
                   <div className="text-center">
-                    {isLoadingAttendance ? (
+                    {isLoadingAttendance || isLoadingTimeFrame ? (
                       <p className="text-sm text-gray-500">Loading attendance status...</p>
                     ) : attendanceStatus?.marked ? (
                       <div>
                         <p className="text-sm text-gray-500 mb-2">You've marked your attendance at:</p>
                         <p className="text-lg font-medium text-gray-900">{attendanceStatus.time}</p>
+                        {attendanceStatus.attendance?.sector && (
+                          <p className="text-sm text-gray-600 mt-2">
+                            <span className="font-medium">Sector:</span> {attendanceStatus.attendance.sector}
+                          </p>
+                        )}
+                        {attendanceStatus.attendance?.location && (
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Location:</span> {attendanceStatus.attendance.location}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div>
                         <p className="text-sm text-gray-500 mb-4">Current attendance status: Not marked</p>
                         <Button
-                          onClick={handleMarkAttendance}
-                          disabled={markAttendanceMutation.isPending || !isAttendanceTimeValid(new Date())}
+                          onClick={handleOpenAttendanceModal}
+                          disabled={!isWithinTimeFrame}
                           className="inline-flex items-center"
                         >
                           <Check className="mr-2 h-4 w-4" />
-                          {markAttendanceMutation.isPending ? "Marking..." : "Mark Attendance"}
+                          Mark Attendance
                         </Button>
+                        <div className="mt-3 text-sm text-gray-500">
+                          <p>You'll need to provide your:</p>
+                          <ul className="list-disc list-inside mt-1 space-y-1">
+                            <li>Working insurance sector</li>
+                            <li>Current location</li>
+                          </ul>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -300,6 +363,15 @@ export default function AgentDashboard() {
       <AddClientModal 
         open={showAddClientModal} 
         onOpenChange={setShowAddClientModal} 
+      />
+      
+      <MarkAttendanceModal 
+        open={showAttendanceModal}
+        onOpenChange={setShowAttendanceModal}
+        timeFrame={{
+          startTime: timeFrame?.startTime || "06:00",
+          endTime: timeFrame?.endTime || "09:00"
+        }}
       />
     </div>
   );

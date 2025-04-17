@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { ProtectedRoute, AdminRoute, ManagerRoute, AgentRoute } from "@/lib/protected-route";
 
 import NotFound from "@/pages/not-found";
@@ -22,10 +23,20 @@ import ManagerAgents from "@/pages/manager/agents";
 import ManagerAttendance from "@/pages/manager/attendance";
 import ManagerReports from "@/pages/manager/reports";
 import ManagerLeader from "@/pages/manager/leader";
+import ManagerSettings from "@/pages/manager/settings";
+import ManagerDailyReports from "@/pages/manager/daily-reports";
 import AgentDashboard from "@/pages/agent/dashboard";
 import AgentAttendance from "@/pages/agent/attendance";
 import AgentClients from "@/pages/agent/clients";
 import AgentPerformance from "@/pages/agent/performance";
+import DailyReportPage from "@/pages/agent/daily-report";
+
+// WebSocket connection component
+function WebSocketConnection() {
+  // This hook will handle the WebSocket connection when user is authenticated
+  useWebSocket();
+  return null;
+}
 
 function Router() {
   return (
@@ -46,12 +57,15 @@ function Router() {
       <ManagerRoute path="/manager/attendance" component={ManagerAttendance} />
       <ManagerRoute path="/manager/reports" component={ManagerReports} />
       <ManagerRoute path="/manager/leader" component={ManagerLeader} />
+      <ManagerRoute path="/manager/settings" component={ManagerSettings} />
+      <ManagerRoute path="/manager/daily-reports" component={ManagerDailyReports} />
       
       {/* Agent Routes */}
       <AgentRoute path="/agent/dashboard" component={AgentDashboard} />
       <AgentRoute path="/agent/attendance" component={AgentAttendance} />
       <AgentRoute path="/agent/clients" component={AgentClients} />
       <AgentRoute path="/agent/performance" component={AgentPerformance} />
+      <AgentRoute path="/agent/daily-report" component={DailyReportPage} />
       
       <Route component={NotFound} />
     </Switch>
@@ -63,6 +77,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router />
+        <WebSocketConnection />
         <Toaster />
       </AuthProvider>
     </QueryClientProvider>

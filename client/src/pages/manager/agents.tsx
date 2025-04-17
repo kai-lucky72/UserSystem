@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -6,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User } from "@shared/schema";
+import { User, UserRole } from "@shared/schema";
 import { UserPlus, Search, Trash2, Eye } from "lucide-react";
 import { AddAgentModal } from "@/components/modals/add-agent-modal";
 import { DeleteUserModal } from "@/components/modals/delete-user-modal";
@@ -46,13 +45,15 @@ export default function ManagerAgents() {
                 </Button>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-4 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
                 <Input
                   placeholder="Search agents..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-xs"
-                  prefix={<Search className="h-4 w-4 text-gray-400" />}
+                  className="max-w-xs pl-10"
                 />
               </div>
 
@@ -106,7 +107,7 @@ export default function ManagerAgents() {
                                   size="sm"
                                   onClick={() => {
                                     // Handle view action
-                                    const baseUrl = agent.role === "AGENT" ? "/agent" : "/manager";
+                                    const baseUrl = agent.role === UserRole.AGENT ? "/agent" : "/manager";
                                     window.location.href = `${baseUrl}/performance?userId=${agent.id}`;
                                   }}
                                 >
@@ -133,10 +134,10 @@ export default function ManagerAgents() {
         </main>
       </div>
 
-      <AddAgentModal open={showAddModal} onClose={() => setShowAddModal(false)} />
+      <AddAgentModal open={showAddModal} onOpenChange={(open) => setShowAddModal(open)} />
       <DeleteUserModal
         open={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        onOpenChange={(open) => setShowDeleteModal(open)}
         user={selectedAgent}
       />
     </div>

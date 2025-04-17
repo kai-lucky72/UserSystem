@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -11,12 +10,20 @@ import { AssignLeaderModal } from "@/components/modals/assign-leader-modal";
 
 export default function ManagerLeader() {
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<User | null>(null);
 
   const { data: agents } = useQuery<User[]>({
     queryKey: ["/api/agents"],
   });
 
   const leaderAgent = agents?.find(agent => agent.isLeader);
+
+  const handleAssignLeader = () => {
+    // Always set selectedAgent to null to force the dropdown to appear
+    // This allows the user to choose from the list of agents
+    setSelectedAgent(null);
+    setShowAssignModal(true);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
@@ -55,7 +62,7 @@ export default function ManagerLeader() {
                           <p className="text-gray-500">No agent leader assigned</p>
                         )}
                       </div>
-                      <Button onClick={() => setShowAssignModal(true)}>
+                      <Button onClick={handleAssignLeader}>
                         <Crown className="h-4 w-4 mr-2" />
                         {leaderAgent ? "Change Leader" : "Assign Leader"}
                       </Button>
@@ -70,9 +77,8 @@ export default function ManagerLeader() {
 
       <AssignLeaderModal 
         open={showAssignModal} 
-        onClose={() => setShowAssignModal(false)}
-        currentLeader={leaderAgent}
-        agents={agents?.filter(a => !a.isLeader) || []}
+        onOpenChange={setShowAssignModal}
+        agent={selectedAgent}
       />
     </div>
   );

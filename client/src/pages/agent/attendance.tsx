@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,7 +14,8 @@ export default function AgentAttendance() {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   const { data: attendanceStatus, isLoading } = useQuery({
-    queryKey: ["/api/attendance/status"],
+    queryKey: ["/api/attendance/status", user?.id],
+    enabled: !!user,
   });
 
   const markAttendanceMutation = useMutation({

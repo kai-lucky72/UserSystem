@@ -4,11 +4,13 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "NODE_ENV=development tsx server/index.ts",
+    "dev": "cross-env NODE_ENV=development tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "start": "NODE_ENV=production node dist/index.js",
+    "start": "cross-env NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "setup": "tsx scripts/setup_db.ts",
+    "postinstall": "npm run db:push"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -48,6 +50,7 @@
     "cmdk": "^1.0.0",
     "connect-pg-simple": "^10.0.0",
     "date-fns": "^3.6.0",
+    "dotenv": "^16.4.5",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.3.0",
@@ -59,6 +62,7 @@
     "memorystore": "^1.6.7",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
+    "pg": "^8.11.3",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
@@ -79,6 +83,7 @@
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/typography": "^0.5.15",
     "@types/connect-pg-simple": "^7.0.3",
+    "@types/debug": "^4.1.12",
     "@types/express": "4.17.21",
     "@types/express-session": "^1.18.0",
     "@types/node": "20.16.11",
@@ -89,13 +94,14 @@
     "@types/ws": "^8.5.13",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
-    "drizzle-kit": "^0.30.4",
+    "cross-env": "^7.0.3",
+    "drizzle-kit": "^0.31.0",
     "esbuild": "^0.25.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
     "tsx": "^4.19.1",
     "typescript": "5.6.3",
-    "vite": "^5.4.14"
+    "vite": "^6.3.0"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

@@ -1,21 +1,32 @@
-import { 
-  User, 
-  Attendance, 
-  Client, 
-  HelpRequest, 
+import {
+  User,
   InsertUser,
-  InsertAttendance,
+  Client,
   InsertClient,
+  HelpRequest,
   InsertHelpRequest,
-  UserRole
+  Attendance,
+  InsertAttendance,
+  UserRole,
+  AttendanceTimeFrame,
+  InsertAttendanceTimeFrame,
+  attendanceTimeFrame,
+  DailyReport,
+  InsertDailyReport,
+  dailyReports,
+  users,
+  attendance,
+  clients,
+  helpRequests
 } from "@shared/schema";
 import { db } from "./db";
-import { users, attendance, clients, helpRequests } from "@shared/schema";
-import { eq, and, isNull, desc, asc, gte, lte } from "drizzle-orm";
+import { eq, and, isNull, desc, asc, gte, lte, or, count, inArray } from "drizzle-orm";
 import { IStorage } from "./storage";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
+import { hashPassword } from "./auth";
+import { log } from "./vite";
 
 // Create PostgreSQL session store
 const PostgresSessionStore = connectPgSimple(session);
@@ -28,6 +39,103 @@ export class DatabaseStorage implements IStorage {
       pool,
       createTableIfMissing: true 
     });
+    
+    // Initialize default users if they don't exist
+    this.initializeDefaultUsers().catch(err => {
+      console.error('Error initializing default users:', err);
+    });
+  }
+
+  // Initialize default users if they don't exist
+  async initializeDefaultUsers() {
+    try {
+      // Check if admin user exists
+      const adminQuery = "SELECT * FROM users WHERE email = 'admin@example.com'";
+      const adminResult = await pool.query(adminQuery);
+      
+      // Check if manager user exists
+      const managerQuery = "SELECT * FROM users WHERE email = 'manager@example.com'";
+      const managerResult = await pool.query(managerQuery);
+      
+      // Check if agent user exists
+      const agentQuery = "SELECT * FROM users WHERE email = 'agent@example.com'";
+      const agentResult = await pool.query(agentQuery);
+      
+      let adminId = null;
+      let managerId = null;
+      
+      // If all users exist, we're done
+      if (adminResult.rows.length > 0 && managerResult.rows.length > 0 && agentResult.rows.length > 0) {
+        log('All default users already exist');
+        return;
+      }
+      
+      log('Creating default users...');
+      
+      // Create admin user if it doesn't exist
+      if (adminResult.rows.length === 0) {
+        const adminPassword = await hashPassword('admin123');
+        const createAdminQuery = `
+          INSERT INTO users (
+            first_name, last_name, email, work_id, national_id, 
+            phone_number, password, role, is_leader
+          ) 
+          VALUES (
+            'Admin', 'User', 'admin@example.com', 'ADM001', '1234567890', 
+            '1234567890', $1, 'admin', false
+          ) 
+          RETURNING id`;
+        
+        const adminInsertResult = await pool.query(createAdminQuery, [adminPassword]);
+        adminId = adminInsertResult.rows[0].id;
+        log('Admin user created successfully');
+      } else {
+        adminId = adminResult.rows[0].id;
+      }
+      
+      // Create manager user if it doesn't exist
+      if (managerResult.rows.length === 0) {
+        const managerPassword = await hashPassword('manager123');
+        const createManagerQuery = `
+          INSERT INTO users (
+            first_name, last_name, email, work_id, national_id, 
+            phone_number, password, role, is_leader
+          ) 
+          VALUES (
+            'Manager', 'User', 'manager@example.com', 'MGR001', '0987654321', 
+            '0987654321', $1, 'manager', false
+          ) 
+          RETURNING id`;
+        
+        const managerInsertResult = await pool.query(createManagerQuery, [managerPassword]);
+        managerId = managerInsertResult.rows[0].id;
+        log('Manager user created successfully');
+      } else {
+        managerId = managerResult.rows[0].id;
+      }
+      
+      // Create agent user if it doesn't exist
+      if (agentResult.rows.length === 0) {
+        const agentPassword = await hashPassword('agent123');
+        const createAgentQuery = `
+          INSERT INTO users (
+            first_name, last_name, email, work_id, national_id, 
+            phone_number, password, role, manager_id, is_leader
+          ) 
+          VALUES (
+            'Agent', 'User', 'agent@example.com', 'AGT001', '1122334455', 
+            '1122334455', $1, 'agent', $2, false
+          )`;
+        
+        await pool.query(createAgentQuery, [agentPassword, managerId]);
+        log('Agent user created successfully');
+      }
+      
+      log('Default users setup completed');
+    } catch (err) {
+      console.error('Error initializing default users:', err);
+      // Log but don't throw - we want the app to start even if user creation fails
+    }
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -46,13 +154,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByWorkIdAndEmail(workId: string, email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(
-      and(
-        eq(users.workId, workId),
-        eq(users.email, email)
-      )
-    );
-    return user;
+    console.log(`DB Storage: Searching for user with workId: ${workId} and email: ${email}`);
+    
+    try {
+      const [user] = await db.select().from(users).where(
+        and(
+          eq(users.workId, workId),
+          eq(users.email, email)
+        )
+      );
+      
+      if (user) {
+        console.log(`DB Storage: Found user: ${user.firstName} ${user.lastName} (${user.role})`);
+        console.log(`DB Storage: User password is ${user.password ? 'SET' : 'NULL'}`);
+      } else {
+        console.log('DB Storage: User not found');
+        
+        // For debugging, let's check if either workId or email exists separately
+        const userByWorkId = await this.getUserByWorkId(workId);
+        const userByEmail = await this.getUserByEmail(email);
+        
+        if (userByWorkId) {
+          console.log(`DB Storage: Found user with workId ${workId} but email doesn't match`);
+        }
+        
+        if (userByEmail) {
+          console.log(`DB Storage: Found user with email ${email} but workId doesn't match`);
+        }
+      }
+      
+      return user;
+    } catch (error) {
+      console.error('DB Storage: Error in getUserByWorkIdAndEmail:', error);
+      return undefined;
+    }
   }
 
   async createUser(userData: InsertUser): Promise<User> {
@@ -78,6 +213,13 @@ export class DatabaseStorage implements IStorage {
     return db.select()
       .from(users)
       .where(eq(users.role, UserRole.MANAGER))
+      .orderBy(asc(users.firstName));
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select()
+      .from(users)
+      .orderBy(eq(users.role, UserRole.ADMIN), desc(users.role)) // Order by role (Admin first, then Manager, then Agent)
       .orderBy(asc(users.firstName));
   }
 
@@ -245,5 +387,110 @@ export class DatabaseStorage implements IStorage {
     
     const updatedAgent = await this.updateUser(agentId, { isLeader: null });
     return updatedAgent;
+  }
+
+  async createAttendanceTimeFrame(timeFrameData: InsertAttendanceTimeFrame): Promise<AttendanceTimeFrame> {
+    const [result] = await db.insert(attendanceTimeFrame)
+      .values({
+        ...timeFrameData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    return result;
+  }
+
+  async getAttendanceTimeFrameByManagerId(managerId: number): Promise<AttendanceTimeFrame | undefined> {
+    const [result] = await db.select()
+      .from(attendanceTimeFrame)
+      .where(eq(attendanceTimeFrame.managerId, managerId))
+      .orderBy(desc(attendanceTimeFrame.updatedAt))
+      .limit(1);
+    
+    return result;
+  }
+
+  async updateAttendanceTimeFrame(id: number, timeFrameData: Partial<InsertAttendanceTimeFrame>): Promise<AttendanceTimeFrame | undefined> {
+    const [updatedTimeFrame] = await db
+      .update(attendanceTimeFrame)
+      .set({
+        ...timeFrameData,
+        updatedAt: new Date()
+      })
+      .where(eq(attendanceTimeFrame.id, id))
+      .returning();
+    
+    return updatedTimeFrame;
+  }
+
+  // Daily Reports methods
+  async createDailyReport(reportData: InsertDailyReport): Promise<DailyReport> {
+    const [report] = await db.insert(dailyReports)
+      .values({
+        ...reportData,
+        createdAt: new Date()
+      })
+      .returning();
+    
+    return report;
+  }
+
+  async getDailyReportsByAgentId(agentId: number): Promise<DailyReport[]> {
+    return db.select()
+      .from(dailyReports)
+      .where(eq(dailyReports.agentId, agentId))
+      .orderBy(desc(dailyReports.date));
+  }
+
+  async getDailyReportsByManagerId(managerId: number): Promise<DailyReport[]> {
+    // This requires joining with users to get all agents under a manager
+    const agents = await this.getAllAgentsByManagerId(managerId);
+    const agentIds = agents.map(agent => agent.id);
+    
+    if (agentIds.length === 0) {
+      return [];
+    }
+    
+    return db.select()
+      .from(dailyReports)
+      .where(inArray(dailyReports.agentId, agentIds))
+      .orderBy(desc(dailyReports.date));
+  }
+
+  async getDailyReportsByDate(date: Date): Promise<DailyReport[]> {
+    // Set start of day and end of day
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return db.select()
+      .from(dailyReports)
+      .where(
+        and(
+          gte(dailyReports.date, startOfDay),
+          lte(dailyReports.date, endOfDay)
+        )
+      )
+      .orderBy(desc(dailyReports.date));
+  }
+
+  async getDailyReportsByDateRange(startDate: Date, endDate: Date): Promise<DailyReport[]> {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    
+    return db.select()
+      .from(dailyReports)
+      .where(
+        and(
+          gte(dailyReports.date, start),
+          lte(dailyReports.date, end)
+        )
+      )
+      .orderBy(desc(dailyReports.date));
   }
 }

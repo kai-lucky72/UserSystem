@@ -33,8 +33,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      try {
+        // Ensure password is always present as at least an empty string
+        const fixedCredentials = {
+          ...credentials,
+          password: credentials.password || ""
+        };
+        
+        // Log the request for debugging
+        console.log('Sending login request with credentials:', {
+          workId: fixedCredentials.workId,
+          email: fixedCredentials.email,
+          password: fixedCredentials.password ? '[REDACTED]' : '(empty)'
+        });
+        
+        const res = await apiRequest("POST", "/api/login", fixedCredentials);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Authentication failed");
+        }
+        return await res.json();
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error("Login failed. Please check your credentials.");
+      }
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -46,7 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onError: (error: Error) => {
       toast({
         title: "Login failed",
-        description: error.message,
+        description: error.message === "Missing credentials" 
+          ? "Please enter your Work ID and Email" 
+          : error.message,
         variant: "destructive",
       });
     },

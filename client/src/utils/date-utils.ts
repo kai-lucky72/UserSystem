@@ -26,13 +26,38 @@ export function formatTime(date: Date): string {
 }
 
 /**
- * Checks if the current time is within the valid attendance marking window (6:00 AM to 9:00 AM)
+ * Converts a time string (HH:MM) to minutes since midnight
+ * @param time Time string in HH:MM format
+ * @returns Number of minutes since midnight
+ */
+export function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+/**
+ * Checks if the current time is within the valid attendance marking window based on the timeframe
  * @param date The date to check
+ * @param startTime The start time string in HH:MM format (e.g., "06:00")
+ * @param endTime The end time string in HH:MM format (e.g., "09:00") 
  * @returns boolean indicating if attendance can be marked
  */
-export function isAttendanceTimeValid(date: Date): boolean {
+export function isAttendanceTimeValid(date: Date, startTime?: string, endTime?: string): boolean {
+  // Default values if not provided
+  const start = startTime || "06:00";
+  const end = endTime || "09:00";
+  
+  // Convert current time to minutes since midnight
   const hours = date.getHours();
-  return hours >= 6 && hours < 9;
+  const minutes = date.getMinutes();
+  const currentMinutes = hours * 60 + minutes;
+  
+  // Convert time frame to minutes
+  const startMinutes = timeToMinutes(start);
+  const endMinutes = timeToMinutes(end);
+  
+  // Check if current time is within range
+  return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
 }
 
 /**

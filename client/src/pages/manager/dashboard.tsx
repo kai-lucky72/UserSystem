@@ -23,12 +23,12 @@ export default function ManagerDashboard() {
   const [selectedAgent, setSelectedAgent] = useState<User | null>(null);
 
   const { data: agents, isLoading } = useQuery<User[]>({
-    queryKey: ["/api/agents"],
+    queryKey: ["/api/agents", user?.id],
   });
 
   // Get current date attendance statistics (would normally come from API)
   const { data: attendanceStats } = useQuery({
-    queryKey: ["/api/reports/attendance"],
+    queryKey: ["/api/reports/attendance", user?.id],
   });
 
   // Stats for dashboard summary cards

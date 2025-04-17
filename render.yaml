@@ -1,22 +1,33 @@
-
 services:
+  # Web service
   - type: web
-    name: agent-management
+    name: usersystem
     env: node
     buildCommand: npm install && npm run build
     startCommand: npm run start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 10000
       - key: DATABASE_URL
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-    healthCheckPath: /api/health
-    autoDeploy: true
-    plan: free
+        fromDatabase:
+          name: usersystem-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
 
+  # Database service
 databases:
-  - name: agent-management-db
+  - name: usersystem-db
     plan: free
-    ipAllowList: []
+    databaseName: agent_management
+    user: usersystem_user
+
+# Global environment variables
+envVarGroups:
+  - name: usersystem-env
+    envVars:
+      - key: TZ
+        value: UTC

@@ -1,9 +1,10 @@
-import { users, attendance, clients, helpRequests } from "@shared/schema";
-import type { User, InsertUser, Attendance, InsertAttendance, Client, InsertClient, HelpRequest, InsertHelpRequest, UserRoleType } from "@shared/schema";
+import { users, attendance, clients, helpRequests, attendanceTimeFrame, dailyReports } from "@shared/schema";
+import type { User, InsertUser, Attendance, InsertAttendance, Client, InsertClient, HelpRequest, InsertHelpRequest, UserRoleType, AttendanceTimeFrame, InsertAttendanceTimeFrame, DailyReport, InsertDailyReport } from "@shared/schema";
 import { UserRole } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
+// Create the memory store with the correct typing
 const MemoryStore = createMemoryStore(session);
 
 export interface IStorage {
@@ -16,12 +17,18 @@ export interface IStorage {
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
   getAllManagers(): Promise<User[]>;
+  getAllUsers(): Promise<User[]>;
   getAllAgentsByManagerId(managerId: number): Promise<User[]>;
   
   // Attendance
   markAttendance(attendance: InsertAttendance): Promise<Attendance>;
   getAttendanceByUserIdAndDate(userId: number, date: Date): Promise<Attendance | undefined>;
   getAttendanceByDate(date: Date): Promise<Attendance[]>;
+  
+  // Attendance Time Frame
+  createAttendanceTimeFrame(timeFrame: InsertAttendanceTimeFrame): Promise<AttendanceTimeFrame>;
+  getAttendanceTimeFrameByManagerId(managerId: number): Promise<AttendanceTimeFrame | undefined>;
+  updateAttendanceTimeFrame(id: number, timeFrame: Partial<InsertAttendanceTimeFrame>): Promise<AttendanceTimeFrame | undefined>;
   
   // Clients
   createClient(client: InsertClient): Promise<Client>;
@@ -37,8 +44,15 @@ export interface IStorage {
   assignAgentAsLeader(agentId: number): Promise<User | undefined>;
   removeAgentAsLeader(agentId: number): Promise<User | undefined>;
   
-  // Session store
-  sessionStore: session.SessionStore;
+  // Daily Reports
+  createDailyReport(report: InsertDailyReport): Promise<DailyReport>;
+  getDailyReportsByAgentId(agentId: number): Promise<DailyReport[]>;
+  getDailyReportsByManagerId(managerId: number): Promise<DailyReport[]>;
+  getDailyReportsByDate(date: Date): Promise<DailyReport[]>;
+  getDailyReportsByDateRange(startDate: Date, endDate: Date): Promise<DailyReport[]>;
+  
+  // Session store - using more generic session.Store type
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -46,26 +60,34 @@ export class MemStorage implements IStorage {
   private attendanceData: Map<number, Attendance>;
   private clientsData: Map<number, Client>;
   private helpRequestsData: Map<number, HelpRequest>;
+  private attendanceTimeFrameData: Map<number, AttendanceTimeFrame>;
+  private dailyReportsData: Map<number, DailyReport>;
   private currentId: { [key: string]: number };
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 
   constructor() {
     this.usersData = new Map();
     this.attendanceData = new Map();
     this.clientsData = new Map();
     this.helpRequestsData = new Map();
+    this.attendanceTimeFrameData = new Map();
+    this.dailyReportsData = new Map();
     this.currentId = {
       users: 1,
       attendance: 1,
       clients: 1,
       helpRequests: 1,
+      attendanceTimeFrame: 1,
+      dailyReports: 1,
     };
+    
+    // Use type assertion to ensure proper type compatibility
     this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000, // 24 hours
+      checkPeriod: 86400000 // 24 hours
     });
-
-    // Create an admin user by default
-    this.createUser({
+    
+    // Create default admin user
+    const adminData: InsertUser = {
       firstName: "Admin",
       lastName: "User",
       email: "admin@example.com",
@@ -74,8 +96,12 @@ export class MemStorage implements IStorage {
       phoneNumber: "1234567890",
       password: "admin123",
       role: UserRole.ADMIN,
-      managerId: undefined,
-      isLeader: false,
+      managerId: null,
+      isLeader: false
+    };
+    
+    this.createUser(adminData).catch(err => {
+      console.error("Failed to create default admin user:", err);
     });
   }
 
@@ -93,14 +119,40 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByWorkIdAndEmail(workId: string, email: string): Promise<User | undefined> {
-    return Array.from(this.usersData.values()).find(
+    console.log(`Searching for user with workId: ${workId} and email: ${email}`);
+    
+    const allUsers = Array.from(this.usersData.values());
+    console.log(`Total users in database: ${allUsers.length}`);
+    
+    const user = allUsers.find(
       user => user.workId === workId && user.email === email
     );
+    
+    if (user) {
+      console.log(`Found user: ${user.firstName} ${user.lastName} (${user.role})`);
+    } else {
+      console.log('User not found');
+    }
+    
+    return user;
   }
 
   async createUser(userData: InsertUser): Promise<User> {
     const id = this.currentId.users++;
-    const user: User = { ...userData, id };
+    // Create a properly typed User object from the InsertUser data
+    const user: User = {
+      id,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      email: userData.email,
+      workId: userData.workId,
+      nationalId: userData.nationalId,
+      phoneNumber: userData.phoneNumber,
+      password: userData.password ?? null,
+      role: userData.role,
+      managerId: userData.managerId ?? null,
+      isLeader: userData.isLeader ?? false
+    };
     this.usersData.set(id, user);
     return user;
   }
@@ -134,6 +186,10 @@ export class MemStorage implements IStorage {
   async getAllManagers(): Promise<User[]> {
     return Array.from(this.usersData.values())
       .filter(user => user.role === UserRole.MANAGER);
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.usersData.values());
   }
 
   async getAllAgentsByManagerId(managerId: number): Promise<User[]> {
@@ -251,6 +307,64 @@ export class MemStorage implements IStorage {
     const updatedAgent = { ...agent, isLeader: false };
     this.usersData.set(agentId, updatedAgent);
     return updatedAgent;
+  }
+
+  // ATTENDANCE TIME FRAME METHODS
+  async createAttendanceTimeFrame(timeFrameData: InsertAttendanceTimeFrame): Promise<AttendanceTimeFrame> {
+    const id = this.currentId.attendanceTimeFrame++;
+    const timeFrame: AttendanceTimeFrame = { ...timeFrameData, id };
+    this.attendanceTimeFrameData.set(id, timeFrame);
+    return timeFrame;
+  }
+
+  async getAttendanceTimeFrameByManagerId(managerId: number): Promise<AttendanceTimeFrame | undefined> {
+    return Array.from(this.attendanceTimeFrameData.values()).find(timeFrame => timeFrame.managerId === managerId);
+  }
+
+  async updateAttendanceTimeFrame(id: number, timeFrameData: Partial<InsertAttendanceTimeFrame>): Promise<AttendanceTimeFrame | undefined> {
+    const timeFrame = this.attendanceTimeFrameData.get(id);
+    if (!timeFrame) return undefined;
+
+    const updatedTimeFrame = { ...timeFrame, ...timeFrameData };
+    this.attendanceTimeFrameData.set(id, updatedTimeFrame);
+    return updatedTimeFrame;
+  }
+
+  // DAILY REPORT METHODS
+  async createDailyReport(reportData: InsertDailyReport): Promise<DailyReport> {
+    const id = this.currentId.dailyReports++;
+    const report: DailyReport = { ...reportData, id };
+    this.dailyReportsData.set(id, report);
+    return report;
+  }
+
+  async getDailyReportsByAgentId(agentId: number): Promise<DailyReport[]> {
+    return Array.from(this.dailyReportsData.values())
+      .filter(report => report.agentId === agentId);
+  }
+
+  async getDailyReportsByManagerId(managerId: number): Promise<DailyReport[]> {
+    return Array.from(this.dailyReportsData.values())
+      .filter(report => report.managerId === managerId);
+  }
+
+  async getDailyReportsByDate(date: Date): Promise<DailyReport[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return Array.from(this.dailyReportsData.values())
+      .filter(report => new Date(report.date) >= startOfDay && new Date(report.date) <= endOfDay);
+  }
+
+  async getDailyReportsByDateRange(startDate: Date, endDate: Date): Promise<DailyReport[]> {
+    const startOfRange = new Date(startDate);
+    const endOfRange = new Date(endDate);
+    
+    return Array.from(this.dailyReportsData.values())
+      .filter(report => new Date(report.date) >= startOfRange && new Date(report.date) <= endOfRange);
   }
 }
 

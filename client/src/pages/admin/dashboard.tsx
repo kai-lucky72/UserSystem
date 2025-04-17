@@ -24,11 +24,37 @@ export default function AdminDashboard() {
     queryKey: ["/api/managers"],
   });
 
+  // Get agents count for each manager
+  const { data: allAgents } = useQuery<User[]>({
+    queryKey: ["/api/agents", "all"],
+    queryFn: async () => {
+      const res = await fetch("/api/agents?all=true");
+      if (!res.ok) throw new Error("Failed to fetch all agents");
+      return res.json();
+    },
+  });
+
+  // Get pending help requests
+  const { data: pendingHelpRequests } = useQuery({
+    queryKey: ["/api/help-requests", false],
+    queryFn: async () => {
+      const res = await fetch("/api/help-requests?resolved=false");
+      if (!res.ok) throw new Error("Failed to fetch help requests");
+      return res.json();
+    },
+  });
+
   // Mock statistics for the dashboard
   const stats = {
     managers: managers?.length || 0,
-    agents: 47, // This would normally come from an API call
-    helpRequests: 3, // This would normally come from an API call
+    agents: allAgents?.length || 0, // Use actual count from API instead of hardcoded value
+    helpRequests: pendingHelpRequests?.length || 0, // Use actual count from API
+  };
+
+  // Count agents per manager
+  const getAgentCountForManager = (managerId: number): number => {
+    if (!allAgents) return 0;
+    return allAgents.filter(agent => agent.managerId === managerId).length;
   };
 
   const handleDeleteManager = (manager: User) => {
@@ -230,7 +256,7 @@ export default function AdminDashboard() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="text-sm text-gray-900">
                                         <Badge variant="outline" className="text-sm">
-                                          0 Agents
+                                          {getAgentCountForManager(manager.id)} Agents
                                         </Badge>
                                       </div>
                                     </td>
