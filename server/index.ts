@@ -7,6 +7,23 @@ const { Pool } = pkg;
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
+// Import route modules
+import authRoutes from './routes/auth';
+import userRoutes from './routes/user';
+import managerRoutes from './routes/manager';
+import agentRoutes from './routes/agent';
+import clientRoutes from './routes/client';
+import attendanceRoutes from './routes/attendance';
+import helpRequestRoutes from './routes/help-request';
+
+// Import our new routes
+import analyticsRoutes from './routes/analytics';
+import activityFeedRoutes from './routes/activity-feed';
+import reportsRoutes from './routes/reports';
+
+// Import middleware
+import { requireAuth } from './middleware/auth';
+
 const execAsync = promisify(exec);
 
 // Function to ensure database exists
@@ -94,6 +111,18 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Setup API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/user', requireAuth, userRoutes);
+app.use('/api/managers', requireAuth, managerRoutes);
+app.use('/api/agents', requireAuth, agentRoutes);
+app.use('/api/clients', requireAuth, clientRoutes);
+app.use('/api/attendance', requireAuth, attendanceRoutes);
+app.use('/api/help-requests', requireAuth, helpRequestRoutes);
+app.use('/api/analytics', requireAuth, analyticsRoutes);
+app.use('/api/activity-feed', requireAuth, activityFeedRoutes);
+app.use('/api/reports', requireAuth, reportsRoutes);
 
 (async () => {
   // Ensure database exists before starting server
